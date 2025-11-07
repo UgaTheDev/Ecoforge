@@ -5,14 +5,13 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WasteEntry } from '../types';
 import { getWasteTypeColor } from '../utils/wasteColors';
 import { formatFullDate } from '../utils/dateUtils';
 
-const WasteDetailScreen = ({ route, navigation }: any) => {
+const WasteDetailScreen = ({ route }: any) => {
   const { entry }: { entry: WasteEntry } = route.params;
   const color = getWasteTypeColor(entry.wasteType);
 
@@ -51,16 +50,6 @@ const WasteDetailScreen = ({ route, navigation }: any) => {
             <Text style={styles.infoLabel}>Date</Text>
             <Text style={styles.infoValue}>{formatFullDate(entry.timestamp)}</Text>
           </View>
-
-          {entry.location && (
-            <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={20} color="#64748b" />
-              <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>
-                {entry.location.latitude.toFixed(4)}, {entry.location.longitude.toFixed(4)}
-              </Text>
-            </View>
-          )}
         </View>
 
         {entry.description && (
