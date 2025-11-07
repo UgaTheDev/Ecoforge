@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,12 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { useWaste } from '../contexts/WasteContext';
-import WasteCard from '../components/WasteCard';
-import StatsCard from '../components/StatsCard';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
+import { useWaste } from "../contexts/WasteContext";
+import WasteCard from "../components/WasteCard";
+import StatsCard from "../components/StatsCard";
 
 const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
@@ -36,8 +36,14 @@ const HomeScreen = ({ navigation }: any) => {
     setRefreshing(false);
   };
 
-  const totalPoints = wasteEntries.reduce((sum, entry) => sum + entry.points, 0);
-  const totalWaste = wasteEntries.reduce((sum, entry) => sum + entry.quantity, 0);
+  const totalPoints = wasteEntries.reduce(
+    (sum, entry) => sum + entry.points,
+    0
+  );
+  const totalWaste = wasteEntries.reduce(
+    (sum, entry) => sum + entry.quantity,
+    0
+  );
 
   return (
     <View style={styles.container}>
@@ -64,13 +70,13 @@ const HomeScreen = ({ navigation }: any) => {
                 icon="star"
                 label="Total Points"
                 value={totalPoints}
-                gradient={['#f59e0b', '#d97706']}
+                gradient={["#f59e0b", "#d97706"]}
               />
               <StatsCard
                 icon="trash"
                 label="Waste Logged"
                 value={`${totalWaste.toFixed(1)} kg`}
-                gradient={['#10b981', '#059669']}
+                gradient={["#10b981", "#059669"]}
               />
             </View>
 
@@ -90,7 +96,7 @@ const HomeScreen = ({ navigation }: any) => {
                 </Text>
                 <TouchableOpacity
                   style={styles.emptyButton}
-                  onPress={() => navigation.navigate('Camera')}
+                  onPress={() => navigation.navigate("Camera")}
                 >
                   <Text style={styles.emptyButtonText}>Log Waste</Text>
                 </TouchableOpacity>
@@ -101,7 +107,7 @@ const HomeScreen = ({ navigation }: any) => {
         renderItem={({ item }) => (
           <WasteCard
             entry={item}
-            onPress={() => navigation.navigate('WasteDetail', { entry: item })}
+            onPress={() => navigation.navigate("WasteDetail", { entry: item })}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -114,90 +120,90 @@ const HomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   greeting: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
   },
   username: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#1e293b",
     marginTop: 4,
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
   statsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     gap: 8,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 12,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#1e293b",
   },
   seeAll: {
     fontSize: 14,
-    color: '#10b981',
-    fontWeight: '600',
+    color: "#10b981",
+    fontWeight: "600",
   },
   listContent: {
     paddingBottom: 20,
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
     paddingHorizontal: 40,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#1e293b",
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
+    color: "#64748b",
+    textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
   },
   emptyButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: "#10b981",
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 24,
   },
   emptyButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 
