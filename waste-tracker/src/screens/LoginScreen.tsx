@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const LoginScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,6 +23,31 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   
   const { login, register } = useAuth();
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleSubmit = async () => {
     if (!username || !password || (!isLogin && !email)) {
@@ -44,84 +71,142 @@ const LoginScreen = () => {
 
   return (
     <LinearGradient
-      colors={['#10b981', '#059669']}
+      colors={['#0f766e', '#10b981', '#34d399']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+            }
+          ]}
+        >
           <View style={styles.header}>
-            <Ionicons name="leaf" size={60} color="#fff" />
+            <View style={styles.iconWrapper}>
+              <LinearGradient
+                colors={['#ffffff', '#f0fdfa']}
+                style={styles.iconGradient}
+              >
+                <Ionicons name="leaf" size={48} color="#10b981" />
+              </LinearGradient>
+            </View>
             <Text style={styles.title}>Waste Tracker</Text>
-            <Text style={styles.subtitle}>Track, Reduce, Earn Rewards</Text>
+            <Text style={styles.subtitle}>Track • Compete • Impact 🌍</Text>
           </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#64748b" />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-
-            {!isLogin && (
-              <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#64748b" />
+          <View style={styles.formContainer}>
+            <View style={styles.form}>
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputIconContainer}>
+                  <Ionicons name="person" size={20} color="#10b981" />
+                </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
-                  value={email}
-                  onChangeText={setEmail}
+                  placeholder="Username"
+                  value={username}
+                  onChangeText={setUsername}
                   autoCapitalize="none"
-                  keyboardType="email-address"
                   placeholderTextColor="#94a3b8"
                 />
               </View>
-            )}
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor="#94a3b8"
-              />
+              {!isLogin && (
+                <View style={styles.inputWrapper}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="mail" size={20} color="#10b981" />
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+              )}
+
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputIconContainer}>
+                  <Ionicons name="lock-closed" size={20} color="#10b981" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleSubmit}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonGradient}
+                >
+                  {loading ? (
+                    <Text style={styles.buttonText}>Loading...</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>
+                        {isLogin ? 'Sign In' : 'Create Account'}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={20} color="#fff" />
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => setIsLogin(!isLogin)}
+              >
+                <Text style={styles.switchText}>
+                  {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                  <Text style={styles.switchTextBold}>
+                    {isLogin ? 'Sign Up' : 'Sign In'}
+                  </Text>
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Loading...' : (isLogin ? 'Login' : 'Sign Up')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.switchButton}
-              onPress={() => setIsLogin(!isLogin)}
-            >
-              <Text style={styles.switchText}>
-                {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Login'}
-              </Text>
-            </TouchableOpacity>
           </View>
-        </View>
+
+          <View style={styles.features}>
+            <FeatureItem icon="trophy" text="Compete on leaderboards" />
+            <FeatureItem icon="flame" text="Build daily streaks" />
+            <FeatureItem icon="ribbon" text="Earn badges & rewards" />
+          </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
 };
+
+const FeatureItem = ({ icon, text }: { icon: string; text: string }) => (
+  <View style={styles.featureItem}>
+    <View style={styles.featureIcon}>
+      <Ionicons name={icon as any} size={16} color="#10b981" />
+    </View>
+    <Text style={styles.featureText}>{text}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -137,66 +222,129 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
+  },
+  iconWrapper: {
+    marginBottom: 16,
+  },
+  iconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   title: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop: 16,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 16,
     color: '#fff',
-    marginTop: 8,
-    opacity: 0.9,
+    opacity: 0.95,
+  },
+  formContainer: {
+    marginBottom: 32,
   },
   form: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  inputContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
     marginBottom: 16,
-    height: 56,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  inputIconContainer: {
+    width: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
-    marginLeft: 12,
+    paddingVertical: 16,
+    paddingRight: 16,
     fontSize: 16,
     color: '#1e293b',
   },
   button: {
-    backgroundColor: '#10b981',
-    borderRadius: 12,
-    height: 56,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    paddingVertical: 18,
+    gap: 8,
   },
   buttonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   switchButton: {
-    marginTop: 16,
     alignItems: 'center',
+    paddingVertical: 8,
   },
   switchText: {
-    color: '#10b981',
+    color: '#64748b',
     fontSize: 14,
-    fontWeight: '500',
+  },
+  switchTextBold: {
+    color: '#10b981',
+    fontWeight: '700',
+  },
+  features: {
+    gap: 12,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  featureIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

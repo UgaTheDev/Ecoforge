@@ -5,14 +5,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { WasteProvider } from './src/contexts/WasteContext';
+import { GamificationProvider } from './src/contexts/GamificationContext';
 
-// Screens
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import CameraScreen from './src/screens/CameraScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import WasteDetailScreen from './src/screens/WasteDetailScreen';
+import GamificationScreen from './src/screens/GamificationScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -28,6 +29,8 @@ function MainTabs() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Camera') {
             iconName = focused ? 'camera' : 'camera-outline';
+          } else if (route.name === 'Rewards') {
+            iconName = focused ? 'gift' : 'gift-outline';
           } else if (route.name === 'Leaderboard') {
             iconName = focused ? 'trophy' : 'trophy-outline';
           } else if (route.name === 'Profile') {
@@ -45,6 +48,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Camera" component={CameraScreen} />
+      <Tab.Screen name="Rewards" component={GamificationScreen} />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
@@ -82,7 +86,9 @@ export default function App() {
   return (
     <AuthProvider>
       <WasteProvider>
-        <AppNavigator />
+        <GamificationProvider>
+          <AppNavigator />
+        </GamificationProvider>
       </WasteProvider>
     </AuthProvider>
   );

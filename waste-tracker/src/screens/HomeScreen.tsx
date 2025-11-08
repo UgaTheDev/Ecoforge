@@ -10,12 +10,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useWaste } from '../contexts/WasteContext';
+import { useGamification } from '../contexts/GamificationContext';
 import WasteCard from '../components/WasteCard';
 import StatsCard from '../components/StatsCard';
+import StreakDisplay from '../components/StreakDisplay';
 
 const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const { wasteEntries, fetchUserWasteEntries, loading } = useWaste();
+  const { streak, badges } = useGamification();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -38,6 +41,7 @@ const HomeScreen = ({ navigation }: any) => {
 
   const totalPoints = wasteEntries.reduce((sum, entry) => sum + entry.points, 0);
   const totalWaste = wasteEntries.reduce((sum, entry) => sum + entry.quantity, 0);
+  const earnedBadges = badges.filter(b => b.earned).length;
 
   return (
     <View style={styles.container}>
@@ -46,8 +50,16 @@ const HomeScreen = ({ navigation }: any) => {
           <Text style={styles.greeting}>Welcome back,</Text>
           <Text style={styles.username}>{user?.username}!</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color="#1e293b" />
+        <TouchableOpacity 
+          style={styles.rewardsButton}
+          onPress={() => navigation.navigate('Rewards')}
+        >
+          <Ionicons name="gift" size={24} color="#10b981" />
+          {earnedBadges > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{earnedBadges}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -74,6 +86,12 @@ const HomeScreen = ({ navigation }: any) => {
               />
             </View>
 
+            {/* Streak Display */}
+            <StreakDisplay 
+              currentStreak={streak.currentStreak}
+              longestStreak={streak.longestStreak}
+            />
+
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
               <TouchableOpacity>
@@ -86,7 +104,7 @@ const HomeScreen = ({ navigation }: any) => {
                 <Ionicons name="camera-outline" size={64} color="#cbd5e1" />
                 <Text style={styles.emptyTitle}>No waste logged yet</Text>
                 <Text style={styles.emptyText}>
-                  Start tracking your waste by taking a photo!
+                  Start your streak by taking a photo! 🔥
                 </Text>
                 <TouchableOpacity
                   style={styles.emptyButton}
@@ -134,13 +152,30 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     marginTop: 4,
   },
-  notificationButton: {
+  rewardsButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f0fdf4',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   statsContainer: {
     flexDirection: 'row',
