@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Challenge } from '../types/gamification';
 
 interface ChallengeCardProps {
@@ -9,40 +10,113 @@ interface ChallengeCardProps {
 
 const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge }) => {
   const progress = Math.min((challenge.progress / challenge.goal) * 100, 100);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Entrance animation
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+
+    // Progress bar animation
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 1000,
+      useNativeDriver: false,
+    }).start();
+
+    // Pulse animation for completed challenges
+    if (challenge.completed) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [progress, challenge.completed]);
+
   const timeLeft = getTimeLeft(challenge.endDate);
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
-    <View style={[styles.container, challenge.completed && styles.completed]}>
-      <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: challenge.color }]}>
-          <Ionicons name={challenge.icon as any} size={24} color="#fff" />
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.name}>{challenge.name}</Text>
-          <Text style={styles.description}>{challenge.description}</Text>
-        </View>
+    <Animated.View style={[styles.wrapper, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View style={[styles.container, challenge.completed && { transform: [{ scale: pulseAnim }] }]}>
         {challenge.completed && (
-          <Ionicons name="checkmark-circle" size={32} color="#10b981" />
+          <View style={styles.completedBanner}>
+            <LinearGradient
+              colors={['#10b981', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.completedBannerGradient}
+            >
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Text style={styles.completedText}>Completed!</Text>
+            </LinearGradient>
+          </View>
         )}
-      </View>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: challenge.color }]} />
+        <View style={styles.header}>
+          <LinearGradient
+            colors={[challenge.color, challenge.color + 'dd']}
+            style={styles.iconContainer}
+          >
+            <Ionicons name={challenge.icon as any} size={28} color="#fff" />
+          </LinearGradient>
+          <View style={styles.info}>
+            <Text style={styles.name}>{challenge.name}</Text>
+            <Text style={styles.description}>{challenge.description}</Text>
+          </View>
         </View>
-        <Text style={styles.progressText}>
-          {challenge.progress} / {challenge.goal}
-        </Text>
-      </View>
 
-      <View style={styles.footer}>
-        <View style={styles.reward}>
-          <Ionicons name="star" size={16} color="#f59e0b" />
-          <Text style={styles.rewardText}>+{challenge.reward} pts</Text>
+        <View style={styles.progressSection}>
+          <View style={styles.progressBar}>
+            <Animated.View style={[styles.progressFillContainer, { width: progressWidth }]}>
+              <LinearGradient
+                colors={[challenge.color, challenge.color + 'aa']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.progressFill}
+              />
+            </Animated.View>
+          </View>
+          <Text style={styles.progressText}>
+            <Text style={[styles.progressCurrent, { color: challenge.color }]}>
+              {challenge.progress}
+            </Text>
+            {' / '}{challenge.goal}
+          </Text>
         </View>
-        <Text style={styles.timeLeft}>{timeLeft}</Text>
-      </View>
-    </View>
+
+        <View style={styles.footer}>
+          <View style={styles.reward}>
+            <View style={styles.rewardIcon}>
+              <Ionicons name="star" size={14} color="#f59e0b" />
+            </View>
+            <Text style={styles.rewardText}>+{challenge.reward} pts</Text>
+          </View>
+          <View style={styles.timeContainer}>
+            <Ionicons name="time-outline" size={14} color="#94a3b8" />
+            <Text style={styles.timeLeft}>{timeLeft}</Text>
+          </View>
+        </View>
+      </Animated.View>
+    </Animated.View>
   );
 };
 
@@ -58,73 +132,104 @@ const getTimeLeft = (endDate: Date): string => {
     return `${days}d left`;
   }
   if (hours > 0) {
-    return `${hours}h ${minutes}m left`;
+    return `${hours}h ${minutes}m`;
   }
   return `${minutes}m left`;
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+  },
   container: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
+    borderRadius: 20,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 5,
+    position: 'relative',
   },
-  completed: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 2,
-    borderColor: '#10b981',
+  completedBanner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    overflow: 'hidden',
+  },
+  completedBannerGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  completedText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   info: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 16,
   },
   name: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1e293b',
+    marginBottom: 4,
   },
   description: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748b',
-    marginTop: 2,
   },
-  progressContainer: {
-    marginBottom: 12,
+  progressSection: {
+    marginBottom: 16,
   },
   progressBar: {
-    height: 8,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 5,
     overflow: 'hidden',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  progressFillContainer: {
+    height: '100%',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
   },
   progressText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748b',
     textAlign: 'right',
+    fontWeight: '600',
+  },
+  progressCurrent: {
+    fontWeight: '700',
+    fontSize: 15,
   },
   footer: {
     flexDirection: 'row',
@@ -134,16 +239,34 @@ const styles = StyleSheet.create({
   reward: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  rewardIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rewardText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#f59e0b',
   },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   timeLeft: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#94a3b8',
+    fontWeight: '600',
   },
 });
 
