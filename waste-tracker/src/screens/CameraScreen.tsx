@@ -6,7 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useWaste } from '../contexts/WasteContext';
 import { useGamification } from '../contexts/GamificationContext';
 import { wasteService } from '../services/wasteService';
+import { classifyImage } from '../services/classificationService';
 import CelebrationModal from '../components/CelebrationModal';
+
 
 const CameraScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
@@ -39,6 +41,25 @@ const CameraScreen = ({ navigation }: any) => {
     
     setLoading(true);
     try {
+      // Step 1: Classify if it's food or trash using AI model
+      console.log('Classifying image...');
+      const classification = await classifyImage(imageUri);
+      
+      console.log('Classification result:', classification);
+      
+      // Step 2: If it's food, show alert and stop
+      if (classification.isFood) {
+        Alert.alert(
+          '🍕 Food Detected!',
+          `This appears to be food (${(classification.confidence * 100).toFixed(1)}% confident).\n\nPlease only log recyclable waste items like plastic, paper, glass, and metal.`,
+          [{ text: 'OK' }]
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: If it's trash, continue with normal waste analysis
+      console.log('Processing as trash...');
       const analysis = await wasteService.analyzeWaste(imageUri);
       const points = wasteService.calculatePoints(analysis.wasteType, analysis.quantity);
 
@@ -66,7 +87,18 @@ const CameraScreen = ({ navigation }: any) => {
       showCelebration(points, newBadges, completedChallenges, streakIncreased);
 
     } catch (error) {
-      Alert.alert('Error', 'Failed to process image');
+      console.error('Error in analyzeAndSubmit:', error);
+      
+      // Show more specific error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to process image';
+      
+      Alert.alert(
+        'Error',
+        `${errorMessage}\n\nMake sure the backend server is running on http://localhost:5001`,
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
@@ -121,6 +153,12 @@ const CameraScreen = ({ navigation }: any) => {
             {loading ? 'Processing...' : 'Choose Photo'}
           </Text>
         </TouchableOpacity>
+
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Analyzing with AI...</Text>
+          </View>
+        )}
       </View>
 
       <CelebrationModal
@@ -180,6 +218,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    marginTop: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontStyle: 'italic',
   },
 });
 
