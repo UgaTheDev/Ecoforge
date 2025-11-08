@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { WasteProvider } from './src/contexts/WasteContext';
 import { GamificationProvider } from './src/contexts/GamificationContext';
@@ -14,6 +14,7 @@ import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import WasteDetailScreen from './src/screens/WasteDetailScreen';
 import GamificationScreen from './src/screens/GamificationScreen';
+import GarbageVisualizerScreen from './src/screens/GarbageVisualizerScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -23,6 +24,16 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
+          if (route.name === 'Garbage') {
+            return (
+              <MaterialCommunityIcons
+                name="raccoon"
+                size={size + (focused ? 4 : 0)}
+                color={color}
+              />
+            );
+          }
+
           let iconName: keyof typeof Ionicons.glyphMap;
 
           if (route.name === 'Home') {
@@ -49,6 +60,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Camera" component={CameraScreen} />
       <Tab.Screen name="Rewards" component={GamificationScreen} />
+      <Tab.Screen name="Garbage" component={GarbageVisualizerScreen} />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
