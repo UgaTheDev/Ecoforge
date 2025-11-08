@@ -4,85 +4,13 @@ import React, {
   useContext,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "@env";
 
-// --- MOCK/PLACEHOLDER TYPES & SERVICE (Replace with actual imports/logic) ---
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  token: string;
-};
-
-// Simple storage simulation (should be AsyncStorage in React Native)
-const TOKEN_KEY = "user_auth_token";
-const MOCK_STORAGE = {
-  getItem: async (key: string): Promise<string | null> =>
-    localStorage.getItem(key),
-  setItem: async (key: string, value: string): Promise<void> =>
-    localStorage.setItem(key, value),
-  removeItem: async (key: string): Promise<void> =>
-    localStorage.removeItem(key),
-};
-
-// Simplified Auth Service to show JWT interaction
-const authService = {
-  // Simulates an API call that returns a user object including a JWT/token
-  login: async (username: string, password: string): Promise<User> => {
-    // In a real app, this would be a fetch call to your backend
-    console.log(`Mock API: Logging in ${username}`);
-    const mockToken = `jwt.${btoa(username)}.${Date.now()}`;
-    await MOCK_STORAGE.setItem(TOKEN_KEY, mockToken);
-    return {
-      id: "user_" + username,
-      username,
-      email: `${username}@example.com`,
-      token: mockToken,
-    };
-  },
-
-  register: async (
-    username: string,
-    email: string,
-    password: string
-  ): Promise<User> => {
-    // In a real app, this would be a fetch call to your backend
-    console.log(`Mock API: Registering ${username}`);
-    const mockToken = `jwt.${btoa(username)}.${Date.now()}`;
-    await MOCK_STORAGE.setItem(TOKEN_KEY, mockToken);
-    return { id: "user_" + username, username, email, token: mockToken };
-  },
-
-  logout: async (): Promise<void> => {
-    await MOCK_STORAGE.removeItem(TOKEN_KEY);
-    console.log("Mock API: Token removed.");
-  },
-
-  // Attempts to retrieve user data based on a stored token
-  getCurrentUser: async (): Promise<User | null> => {
-    const token = await MOCK_STORAGE.getItem(TOKEN_KEY);
-    if (!token) return null;
-
-    // In a real app, this token would be used to fetch the user's profile from the backend
-    try {
-      const parts = token.split(".");
-      if (parts.length !== 3) throw new Error("Invalid token format");
-      const username = atob(parts[1]);
-
-      return {
-        id: "user_" + username,
-        username,
-        email: `${username}@example.com`,
-        token,
-      };
-    } catch (e) {
-      console.error("Error decoding token:", e);
-      await MOCK_STORAGE.removeItem(TOKEN_KEY); // Clear invalid token
-      return null;
-    }
-  },
-};
-// --- END MOCK ---
+// --- TYPES ---
+type User = { id: string; username: string; email?: string; token: string };
 
 interface AuthContextType {
   user: User | null;
@@ -93,84 +21,152 @@ interface AuthContextType {
     email: string,
     password: string
   ) => Promise<void>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
+  logout: () => Promise<void>;
 }
 
+// --- CONSTANTS & MOCK SERVICE ---
+const TOKEN_KEY = "userToken";
+const MOCK_STORAGE = AsyncStorage;
+
+// NOTE FOR ANDROID EMULATORS:
+// If you are using an Android Emulator, 'localhost' points to the emulator itself.
+// You MUST change this to 'http://10.0.2.2:5000' for the emulator to reach your computer's server.
+
+// --- AUTH SERVICE (Handles API Calls) ---
+const authService = {
+  login: async (username: string, password: string): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ msg: "Login failed" }));
+      throw new Error(errorData.msg || "Login failed due to server error.");
+    }
+
+    const data = await response.json();
+
+    const user: User = {
+      id: String(data.user_id),
+      username: username,
+      email: `${username}@recycle.app`,
+      token: data.access_token,
+    };
+
+    await MOCK_STORAGE.setItem(TOKEN_KEY, data.access_token);
+    return user;
+  },
+
+  register: async (
+    username: string,
+    email: string,
+    password: string
+  ): Promise<void> => {
+    // NOTE: Python backend only uses username and password (ignores email)
+    const response = await fetch(`${API_BASE_URL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }), // ← Only send username and password
+    });
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ msg: "Registration failed" }));
+      throw new Error(
+        errorData.msg || "Registration failed due to server error."
+      );
+    }
+
+    // Registration successful - no return needed
+  },
+
+  logout: async (): Promise<void> => {
+    await MOCK_STORAGE.removeItem(TOKEN_KEY);
+  },
+
+  getCurrentUser: async (): Promise<User | null> => {
+    const token = await MOCK_STORAGE.getItem(TOKEN_KEY);
+    if (!token) {
+      return null;
+    }
+    return {
+      id: "placeholder_id",
+      username: "Authenticated User",
+      token: token,
+    };
+  },
+};
+
+// --- CONTEXT CREATION ---
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// --- PROVIDER COMPONENT (Handles State) ---
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Checks for existing token on mount
   useEffect(() => {
-    loadUserFromToken();
+    const loadUser = async () => {
+      try {
+        const loadedUser = await authService.getCurrentUser();
+        setUser(loadedUser);
+      } catch (error) {
+        console.error("Error loading user:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUser();
   }, []);
 
-  const loadUserFromToken = async () => {
+  const handleLogin = async (username: string, password: string) => {
     try {
-      // getCurrentUser relies on the token stored in MOCK_STORAGE
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.log("Error loading user from token", error);
-      // Ensure token is cleared if fetching user fails
-      await authService.logout();
+      setLoading(true);
+      const loggedInUser = await authService.login(username, password);
+      setUser(loggedInUser);
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (username: string, password: string) => {
-    const loggedInUser = await authService.login(username, password);
-    // Token is saved inside authService.login
-    setUser(loggedInUser);
-  };
-
-  const register = async (
+  const handleRegister = async (
     username: string,
     email: string,
     password: string
   ) => {
-    const newUser = await authService.register(username, email, password);
-    // Token is saved inside authService.register
-    setUser(newUser);
+    // Registration does not automatically log the user in
+    await authService.register(username, email, password);
+    // User must manually log in after registration
   };
 
-  const logout = async () => {
+  const handleLogout = async () => {
+    setLoading(true);
     await authService.logout();
     setUser(null);
+    setLoading(false);
   };
 
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      // Note: Updating user requires refreshing the token in a real scenario
-      // or at least updating the user object in the backend.
-      setUser({ ...user, ...userData });
-    }
+  const contextValue = {
+    user,
+    loading,
+    login: handleLogin,
+    register: handleRegister,
+    logout: handleLogout,
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        register,
-        logout: () => {
-          logout();
-        },
-        updateUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };
 
+// --- HOOK TO CONSUME CONTEXT ---
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,26 +7,29 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Animated,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
+import { LinearGradient } from "expo-linear-gradient";
+import { Alert } from "react-native";
 
 const LoginScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
+  // Custom Error State for UI Message Box
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const { login, register } = useAuth();
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const errorAnim = useRef(new Animated.Value(-100)).current; // For error box animation
 
   useEffect(() => {
     Animated.parallel([
@@ -47,23 +50,63 @@ const LoginScreen = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim, scaleAnim]);
+
+  // Effect for displaying and hiding the error message box
+  useEffect(() => {
+    if (errorMessage) {
+      // Show error
+      Animated.timing(errorAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        // Hide after 3 seconds
+        setTimeout(() => {
+          Animated.timing(errorAnim, {
+            toValue: -100,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => setErrorMessage(null));
+        }, 3000);
+      });
+    }
+  }, [errorMessage, errorAnim]);
 
   const handleSubmit = async () => {
     if (!username || !password || (!isLogin && !email)) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMessage("Please fill in all required fields.");
       return;
     }
 
     setLoading(true);
+    setErrorMessage(null); // Clear previous errors
+
     try {
       if (isLogin) {
         await login(username, password);
       } else {
+        // Registration
         await register(username, email, password);
+
+        // Show success message
+        Alert.alert(
+          "Success!",
+          "Account created successfully! Please log in.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setIsLogin(true); // Switch to login mode
+                setPassword(""); // Clear password
+              },
+            },
+          ]
+        );
       }
-    } catch (error) {
-      Alert.alert('Error', 'Authentication failed. Please try again.');
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      setErrorMessage(error.message || "Authentication failed.");
     } finally {
       setLoading(false);
     }
@@ -71,28 +114,43 @@ const LoginScreen = () => {
 
   return (
     <LinearGradient
-      colors={['#0f766e', '#10b981', '#34d399']}
+      colors={["#0f766e", "#10b981", "#34d399"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
+      {/* Custom Error Message Box */}
+      {errorMessage && (
+        <Animated.View
+          style={[styles.errorBox, { transform: [{ translateY: errorAnim }] }]}
+        >
+          <Ionicons
+            name="warning"
+            size={20}
+            color="#fff"
+            style={{ marginRight: 10 }}
+          />
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </Animated.View>
+      )}
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.content,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
-            }
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            },
           ]}
         >
           <View style={styles.header}>
             <View style={styles.iconWrapper}>
               <LinearGradient
-                colors={['#ffffff', '#f0fdfa']}
+                colors={["#ffffff", "#f0fdfa"]}
                 style={styles.iconGradient}
               >
                 <Ionicons name="leaf" size={48} color="#10b981" />
@@ -156,17 +214,17 @@ const LoginScreen = () => {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={['#10b981', '#059669']}
+                  colors={["#10b981", "#059669"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.buttonGradient}
                 >
                   {loading ? (
-                    <Text style={styles.buttonText}>Loading...</Text>
+                    <Text style={styles.buttonText}>Signing In...</Text>
                   ) : (
                     <>
                       <Text style={styles.buttonText}>
-                        {isLogin ? 'Sign In' : 'Create Account'}
+                        {isLogin ? "Sign In" : "Create Account"}
                       </Text>
                       <Ionicons name="arrow-forward" size={20} color="#fff" />
                     </>
@@ -179,9 +237,11 @@ const LoginScreen = () => {
                 onPress={() => setIsLogin(!isLogin)}
               >
                 <Text style={styles.switchText}>
-                  {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                  {isLogin
+                    ? "Don't have an account? "
+                    : "Already have an account? "}
                   <Text style={styles.switchTextBold}>
-                    {isLogin ? 'Sign Up' : 'Sign In'}
+                    {isLogin ? "Sign Up" : "Sign In"}
                   </Text>
                 </Text>
               </TouchableOpacity>
@@ -217,11 +277,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 40,
   },
   iconWrapper: {
@@ -231,9 +291,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#10b981',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#10b981",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -241,94 +301,94 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
     opacity: 0.95,
   },
   formContainer: {
     marginBottom: 32,
   },
   form: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 10,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   inputIconContainer: {
     width: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   input: {
     flex: 1,
     paddingVertical: 16,
     paddingRight: 16,
     fontSize: 16,
-    color: '#1e293b',
+    color: "#1e293b",
   },
   button: {
     marginTop: 8,
     marginBottom: 16,
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#10b981',
+    overflow: "hidden",
+    shadowColor: "#10b981",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 18,
     gap: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   switchButton: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 8,
   },
   switchText: {
-    color: '#64748b',
+    color: "#64748b",
     fontSize: 14,
   },
   switchTextBold: {
-    color: '#10b981',
-    fontWeight: '700',
+    color: "#10b981",
+    fontWeight: "700",
   },
   features: {
     gap: 12,
   },
   featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     padding: 12,
     borderRadius: 12,
     gap: 12,
@@ -337,14 +397,38 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
   featureText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
+  },
+  // Custom Error Box Styles
+  errorBox: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#ef4444",
+    padding: 15,
+    paddingTop: Platform.OS === "ios" ? 40 : 15, // Add padding for iPhone notch
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 10,
+  },
+  errorText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+    flexShrink: 1,
   },
 });
 
